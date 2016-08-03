@@ -32,7 +32,14 @@ def count_chords(ys):
     for i in range(0,len(counts)):
         if counts[i] > 0:
             d[str(i)] = counts[i]
-    print d
+    print np.max(counts)/np.sum(counts)
+    # print d
+
+def classify_stupidly(ys):
+    counts = np.zeros(25)
+    for el in ys:
+        counts += el
+    print counts[9]/np.sum(counts)
 
 def count_chords_cathegorical(ys):
     counts = np.zeros(25)
@@ -43,13 +50,27 @@ def count_chords_cathegorical(ys):
     l = len(ys[0])
     print np.max(counts)/float(l)
 
+def count_chords_cathegorical_dict_non_one_hot(ys):
+    counts_dict = {}
+    for i in ys:
+        if str(i) not in counts_dict.keys():
+            counts_dict[str(i)] = 1
+        else:
+            counts_dict[str(i)] += 1
+    return counts_dict
 
 
+def count_chords_cathegorical_dict(ys):
+    counts_dict = {}
+    for s in ys:
+        # for el in s:
+        if str(np.argmax(s)) not in counts_dict.keys():
+            counts_dict[str(np.argmax(s))] = 1
+        else:
+            counts_dict[str(np.argmax(s))] += 1
+    return counts_dict
 
-
-
-
-def train_cnn(dg):
+def train_cnn(dg, rc=None):
     session_run_id = "1"
 
     sess = tf.InteractiveSession()
@@ -64,8 +85,8 @@ def train_cnn(dg):
     #convolutions
     # height, width, input channels, output channels
     with tf.name_scope('conv1'):
-        W_conv1 = weight_variable([1, 128, 1, 32])
-        b_conv1 = bias_variable([32])
+        W_conv1 = weight_variable([1, 256, 1, 64])
+        b_conv1 = bias_variable([64])
 
         h_conv1 = tf.nn.relu(conv1d(x_re, W_conv1) + b_conv1)
     with tf.name_scope('pool12x2'):
@@ -73,9 +94,9 @@ def train_cnn(dg):
 
 
     with tf.name_scope('fc1'):
-        h_conv1_flat = tf.reshape(h_pool2, [-1, 1000 * 32])
+        h_conv1_flat = tf.reshape(h_pool2, [-1, 1000 * 64])
 
-        W_fc1 = weight_variable([1000 * 32, 25])
+        W_fc1 = weight_variable([1000 * 64, 25])
         b_fc1 = bias_variable([25])
 
         h_fc1 = tf.nn.sigmoid(tf.matmul(h_conv1_flat, W_fc1) + b_fc1)
@@ -102,11 +123,12 @@ def train_cnn(dg):
         tf.scalar_summary('cross entropy', cross_entropy)
 
     with tf.name_scope('optimizer'):
-        train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-
+        # train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+        train_step = tf.train.AdamOptimizer().minimize(cross_entropy)
 
     with tf.name_scope('accuracy_computation'):
-        correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+        pred = tf.argmax(y, 1)
+        correct_prediction = tf.equal(pred, tf.argmax(y_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         tf.scalar_summary('accuracy_training',accuracy)
 
@@ -141,11 +163,22 @@ def train_cnn(dg):
             # summary = tf.Summary(value=[tf.Summary.Value(tag='total_accuracy', simple_value=acc_total)])
             # train_writer.add_summary(summary,i)
             batch = dg.next_batch(1000)
-            summary, acc, ts, ce = sess.run([merged, accuracy, train_step, cross_entropy],
+            pred_, summary, acc, ts, ce = sess.run([pred, merged, accuracy, train_step, cross_entropy],
                                             feed_dict={x: batch[0], y_: batch[1]})
             train_writer.add_summary(summary, i)
             current_song_ctr, total_songs = dg.get_song_counter()
             epoch = dg.get_epochs()
+            # count_chords(batch[1])
+            # classify_stupidly(batch[1])
+            print "chords:"
+            counts_dict = count_chords_cathegorical_dict(batch[1])
+            for k in sorted(counts_dict.keys()):
+                print k, ":", counts_dict[k]
+            print "prediction"
+            counts_dict = count_chords_cathegorical_dict_non_one_hot(pred_)
+            for k in sorted(counts_dict.keys()):
+                print k, ":", counts_dict[k]
+            print rc.classification_error(batch[1])
             print('Accuracy at step %s: %s, Cross entropy: %s, song %i of %i, epochs %i' % (i, acc, ce, current_song_ctr, total_songs, epoch))
         else:
             batch = dg.next_batch(1000)

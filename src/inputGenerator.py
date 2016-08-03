@@ -18,10 +18,7 @@ class DataGenerator:
         self.X_test = self.add_padding(X_test)
         self.y_test = y_test
 
-
-
     def add_padding(self,Xs):
-
         for i in range(0,len(Xs)):
             # add padding  window_size/2 to beginning and end of song
             Xs[i] = numpy.hstack((Xs[i],numpy.zeros(self._window_size/2)))
@@ -29,19 +26,14 @@ class DataGenerator:
 
         return Xs
 
-        # zero padding before
-
-
     def get_test_input_output(self):
         Xs = []
         ys = []
         for song_num in range(0,len(self.X_test)):
-            X,y = self.get_points_for_song(self.X_test[song_num],self.y_test[song_num])
+            X, y = self.get_points_for_song(self.X_test[song_num],self.y_test[song_num])
             Xs.extend(X)
             ys.extend(y)
-        return Xs,ys
-
-
+        return Xs, ys
 
     def get_points_for_song(self,X,y):
         outputs_X = []
@@ -55,7 +47,6 @@ class DataGenerator:
         return outputs_X,outputs_y
 
     def get_single_point(self):
-
         output_X = self.X[self._song_num][self._frame_num: self._frame_num + self._window_size]
         # output_y = self.y[self._song_num][self._frame_num + self._window_size / 2]
         output_y = self.y[self._song_num][self._frame_num]
@@ -97,16 +88,16 @@ class DataGenerator:
         y = []
 
         for i in range(0,batch_size):
-            X_one,y_one = self.get_single_point()
+            X_one, y_one = self.get_single_point()
 
             X.append(X_one)
             y.append(y_one)
 
-        return X,y
+        return X, y
 
     def get_test(self):
         # get frames
         # get labels
-        X_t,y_t = self.get_test_input_output()
-        return X_t,y_t
+        X_t, y_t = self.get_test_input_output()
+        return X_t, y_t
 
